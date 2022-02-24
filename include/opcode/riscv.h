@@ -138,6 +138,18 @@ static const char * const riscv_pred_succ[16] =
   ((RV_X(x, 1, 2) << 3) | (RV_X(x, 3, 2) << 10) | (RV_X(x, 5, 1) << 2) | (RV_X(x, 6, 2) << 5) | (RV_X(x, 8, 1) << 12))
 #define ENCODE_RVC_J_IMM(x) \
   ((RV_X(x, 1, 3) << 3) | (RV_X(x, 4, 1) << 11) | (RV_X(x, 5, 1) << 2) | (RV_X(x, 6, 1) << 7) | (RV_X(x, 7, 1) << 6) | (RV_X(x, 8, 2) << 9) | (RV_X(x, 10, 1) << 8) | (RV_X(x, 11, 1) << 12))
+/* ZC* */
+#define EXTRACT_RVC_LBU_IMM(x) \
+  ((RV_X(x, 6, 1)) | (RV_X(x, 5, 1) << 1))
+#define EXTRACT_RVC_LHU_IMM(x) \
+  (RV_X(x, 5, 1) << 1)
+#define ENCODE_RVC_LBU_IMM(x) \
+  ((RV_X(x, 0, 1) << 6) | (RV_X(x, 1, 1) << 5))
+#define ENCODE_RVC_LHU_IMM(x) \
+  (RV_X(x, 1, 1) << 5)
+
+#define VALID_RVC_LBU_IMM(x) (EXTRACT_RVC_LBU_IMM((ENCODE_RVC_LBU_IMM(x)) == (x))
+#define VALID_RVC_LHU_IMM(x) (EXTRACT_RVC_LHU_IMM((ENCODE_RVC_LHU_IMM(x)) == (x))
 
 #define VALID_ITYPE_IMM(x) (EXTRACT_ITYPE_IMM(ENCODE_ITYPE_IMM(x)) == (x))
 #define VALID_STYPE_IMM(x) (EXTRACT_STYPE_IMM(ENCODE_STYPE_IMM(x)) == (x))
@@ -312,6 +324,9 @@ enum riscv_insn_class
    INSN_CLASS_ZICSR,
    INSN_CLASS_ZIFENCEI,
    INSN_CLASS_ZIHINTPAUSE,
+   INSN_CLASS_C_OR_ZCA
+   INSN_CLASS_C_OR_ZCF
+   INSN_CLASS_ZCB
   };
 
 /* This structure holds information for a particular instruction.  */
