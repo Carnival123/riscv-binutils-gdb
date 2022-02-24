@@ -1090,6 +1090,19 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	    case 'l': used_bits |= ENCODE_CLTYPE_LD_IMM (-1U); break;
 	    case 'p': used_bits |= ENCODE_CBTYPE_IMM (-1U); break;
 	    case 'a': used_bits |= ENCODE_CJTYPE_IMM (-1U); break;
+            case 'Z': /* ZC* */
+	    switch (*++oparg)
+	      {
+                case 'b': used_bits |= ENCODE_RVC_LBU_IMM (-1U); break;
+		case 'c': USE_BITS (OP_MASK_CRS1S, OP_SH_CRS1S); break;
+                case 'h': used_bits |= ENCODE_RVC_LHU_IMM (-1U); break;
+		default:
+		  as_bad (_("internal: bad RISC-V opcode "
+			    "(unknown operand type `%s'): %s %s"),
+			  opargStart, opc->name, opc->args);
+		  return FALSE;
+	      }
+	    break;
 	    case 'F': /* Compressed funct for .insn directive.  */
 	      switch (*++oparg)
 		{
@@ -2534,6 +2547,51 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		    break;
 		  INSERT_OPERAND (CRS2, *ip, regno);
 		  continue;
+    case 'Z':
+		  switch (*++args)
+		    {
+		    case 'c': /* ZCB RS1 x8-x15.  */
+		      if (!riscv_opts.zce_cmul
+		        && insn->match == MATCH_C_MUL)
+			break;
+		      if (!riscv_opts.zce_sext
+			&& (insn->match == MATCH_C_SEXT_B
+			    || insn->match == MATCH_C_SEXT_H))
+			break;
+		      if (!riscv_opts.zce_zext
+			&& (insn->match == MATCH_C_ZEXT_B
+			    || insn->match == MATCH_C_ZEXT_H
+			    || insn->match == MATCH_C_ZEXT_W))
+			break;
+		      if (!reg_lookup (&s, RCLASS_GPR, &regno)
+			  || !(regno >= 8 && regno <= 15))
+			break;
+		      INSERT_OPERAND (CRS1S, *ip, regno % 8);
+		      continue;
+        case 'b': /* ZCB LBU_IMM  */
+        if (riscv_handle_implicit_zero_offset (imm_expr, s))
+		    continue;
+		  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+		      || imm_expr->X_op != O_constant
+		      || !VALID_RVC_LBU_IMM ((valueT) imm_expr->X_add_number))
+		    break;
+		  ip->insn_opcode |= ENCODE_RVC_LBU_IMM (imm_expr->X_add_number);
+		  goto rvc_imm_done;
+        case 'h': /* ZCB LHU_IMM  */
+        if (riscv_handle_implicit_zero_offset (imm_expr, s))
+		    continue;
+		  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+		      || imm_expr->X_op != O_constant
+		      || !VALID_RVC_LHU_IMM ((valueT) imm_expr->X_add_number))
+		    break;
+		  ip->insn_opcode |= ENCODE_RVC_LHU_IMM (imm_expr->X_add_number);
+		  goto rvc_imm_done;
+		    default:
+		      as_bad (_("internal: unknown ZC* field specifier "
+			  "field specifier `CZ%c'"), *args);
+		    }
+		  break;
+
 		case 'F':
 		  switch (*++oparg)
 		    {
