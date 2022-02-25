@@ -186,6 +186,10 @@ struct riscv_set_options
   int relax; /* Emit relocs the linker is allowed to relax.  */
   int arch_attr; /* Emit arch attribute.  */
   int csr_check; /* Enable the CSR checking.  */
+  int zcb_zext;  /* Enable c.zext.b, c.zext.h, c.zext.w (RV64) */
+  int zcb_sext;  /* Enable c.sext.b, c.sext.h, c.sext.w (RV64 pseudo) */
+  int zcb_not;   /* Enable c.not */
+  int zcb_cmul;  /* Enable c.mul */
 };
 
 static struct riscv_set_options riscv_opts =
@@ -195,7 +199,11 @@ static struct riscv_set_options riscv_opts =
   0,	/* rve */
   1,	/* relax */
   DEFAULT_RISCV_ATTR, /* arch_attr */
-  0.	/* csr_check */
+  0,	/* csr_check */
+  0,    /* zcb_zext */
+  0,    /* zcb_sext */
+  0,    /* zcb_not */
+  0     /* zcb_cmul */
 };
 
 static void
@@ -254,11 +262,14 @@ riscv_multi_subset_supports (enum riscv_insn_class insn_class)
       return riscv_subset_supports ("zihintpause");
 
     case INSN_CLASS_C_OR_ZCA:
-      return riscv_subset_supports("zca")
-    case INSN_CLASS_C_OR_ZCF:
-      return riscv_subset_supports("zcf")
+      return (riscv_subset_supports("c")
+              ||riscv_subset_supports("zca"));
+    case INSN_CLASS_F_AND_C_OR_ZCF:
+      return (riscv_subset_supports("f")
+              ||riscv_subset_supports("c")
+              ||riscv_subset_supports("zcf"));
     case INSN_CLASS_ZCB:
-      return riscv_subset_supports("zcb")
+      return riscv_subset_supports("zcb");
 
     default:
       as_fatal ("Unreachable");
@@ -2193,51 +2204,53 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		    break;
 		  INSERT_OPERAND (CRS2, *ip, regno);
 		  continue;
-    case 'Z':
+                case 'Z':
 		  switch (*++args)
 		    {
-		    case 'c': /* ZCB RS1 x8-x15.  */
-		      if (!riscv_opts.zce_cmul
+	            case 'c': /* ZCB RS1 x8-x15.  */
+		      if (!riscv_opts.zcb_cmul
 		        && insn->match == MATCH_C_MUL)
 			break;
-		      if (!riscv_opts.zce_sext
-			&& (insn->match == MATCH_C_SEXT_B
-			    || insn->match == MATCH_C_SEXT_H))
+                      if (!riscv_opts.zcb_not
+		        && insn->match == MATCH_C_NOT)
 			break;
-		      if (!riscv_opts.zce_zext
+		      if (!riscv_opts.zcb_sext
+			&& (insn->match == MATCH_C_SEXT_B
+			|| insn->match == MATCH_C_SEXT_H))
+			break;
+		      if (!riscv_opts.zcb_zext
 			&& (insn->match == MATCH_C_ZEXT_B
-			    || insn->match == MATCH_C_ZEXT_H
-			    || insn->match == MATCH_C_ZEXT_W))
+			|| insn->match == MATCH_C_ZEXT_H
+			|| insn->match == MATCH_C_ZEXT_W))
 			break;
 		      if (!reg_lookup (&s, RCLASS_GPR, &regno)
-			  || !(regno >= 8 && regno <= 15))
+			|| !(regno >= 8 && regno <= 15))
 			break;
 		      INSERT_OPERAND (CRS1S, *ip, regno % 8);
 		      continue;
-        case 'b': /* ZCB LBU_IMM  */
-        if (riscv_handle_implicit_zero_offset (imm_expr, s))
-		    continue;
-		  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-		      || imm_expr->X_op != O_constant
-		      || !VALID_RVC_LBU_IMM ((valueT) imm_expr->X_add_number))
-		    break;
-		  ip->insn_opcode |= ENCODE_RVC_LBU_IMM (imm_expr->X_add_number);
-		  goto rvc_imm_done;
-        case 'h': /* ZCB LHU_IMM  */
-        if (riscv_handle_implicit_zero_offset (imm_expr, s))
-		    continue;
-		  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-		      || imm_expr->X_op != O_constant
-		      || !VALID_RVC_LHU_IMM ((valueT) imm_expr->X_add_number))
-		    break;
-		  ip->insn_opcode |= ENCODE_RVC_LHU_IMM (imm_expr->X_add_number);
-		  goto rvc_imm_done;
+                    case 'b': /* ZCB LBU_IMM  */
+		      if (riscv_handle_implicit_zero_offset (imm_expr, s))
+		        continue;
+		      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+		        || imm_expr->X_op != O_constant
+		        || !VALID_RVC_LW_IMM ((valueT) imm_expr->X_add_number))
+		        break;
+		      ip->insn_opcode |= ENCODE_RVC_LW_IMM (imm_expr->X_add_number);
+		      goto rvc_imm_done;
+                    case 'h': /* ZCB LHU_IMM  */
+		      if (riscv_handle_implicit_zero_offset (imm_expr, s))
+		        continue;
+		      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+		        || imm_expr->X_op != O_constant
+		        || !VALID_RVC_LW_IMM ((valueT) imm_expr->X_add_number))
+		        break;
+		      ip->insn_opcode |= ENCODE_RVC_LW_IMM (imm_expr->X_add_number);
+		      goto rvc_imm_done;
 		    default:
-		      as_bad (_("internal: unknown ZC* field specifier "
-			  "field specifier `CZ%c'"), *args);
+		      as_bad (_("internal: unknown ZC field specifier "
+			        "field specifier `CZ%c'"), *args);
 		    }
 		  break;
-
 		case 'F':
 		  switch (*++args)
 		    {

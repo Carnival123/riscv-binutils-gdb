@@ -549,6 +549,16 @@
 #define MASK_C_LDSP  0xe003
 #define MATCH_C_SDSP 0xe002
 #define MASK_C_SDSP  0xe003
+#define MATCH_C_LBU 0x8000
+#define MASK_C_LBU 0xfc03
+#define MATCH_C_LHU 0x8400
+#define MASK_C_LHU 0xfc43
+#define MATCH_C_LH 0x8440
+#define MASK_C_LH  0xfc43
+#define MATCH_C_SB 0x8800
+#define MASK_C_SB  0xfc03
+#define MATCH_C_SH 0x8c00
+#define MASK_C_SH 0xfc43
 #define MATCH_C_ZEXT_B 0x9c61
 #define MASK_C_ZEXT_B 0xfc7f
 #define MATCH_C_SEXT_B 0x9c65
