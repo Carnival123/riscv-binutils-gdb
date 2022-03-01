@@ -231,6 +231,52 @@ riscv_set_rvc (bool rvc_value)
   riscv_opts.rvc = rvc_value;
 }
 
+static riscv_subset_list_t riscv_subsets;
+
+static bfd_boolean
+riscv_subset_supports (const char *feature)
+{
+  struct riscv_subset_t *subset;
+
+  if (riscv_opts.rvc && (strcasecmp (feature, "c") == 0))
+    return TRUE;
+
+  return riscv_lookup_subset (&riscv_subsets, feature, &subset);
+}
+
+static bfd_boolean
+riscv_multi_subset_supports (enum riscv_insn_class insn_class)
+{
+      return (riscv_subset_supports ("f")
+	      && riscv_subset_supports ("c"));
+    case INSN_CLASS_D_AND_C:
+      return (riscv_subset_supports ("d")
+	      && riscv_subset_supports ("c"));
+
+    case INSN_CLASS_ZICSR:
+      return riscv_subset_supports ("zicsr");
+    case INSN_CLASS_ZIFENCEI:
+      return riscv_subset_supports ("zifencei");
+    case INSN_CLASS_ZIHINTPAUSE:
+      return riscv_subset_supports ("zihintpause");
+
+    case INSN_CLASS_C_OR_ZCA:
+      return (riscv_subset_supports("c")
+              ||riscv_subset_supports("zca"));
+    case INSN_CLASS_F_AND_C_OR_ZCF:
+      return (riscv_subset_supports("f")
+              ||riscv_subset_supports("c")
+              ||riscv_subset_supports("zcf"));
+    case INSN_CLASS_ZCB:
+      return riscv_subset_supports("zcb");
+
+    default:
+      as_fatal ("Unreachable");
+      return FALSE;
+    }
+}
+
+
 /* This linked list records all enabled extensions, which are parsed from
    the architecture string.  The architecture string can be set by the
    -march option, the elf architecture attributes, and the --with-arch
