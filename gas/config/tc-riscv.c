@@ -186,10 +186,6 @@ struct riscv_set_options
   int relax; /* Emit relocs the linker is allowed to relax.  */
   int arch_attr; /* Emit arch attribute.  */
   int csr_check; /* Enable the CSR checking.  */
-  int zcb_zext;  /* Enable c.zext.b, c.zext.h, c.zext.w (RV64) */
-  int zcb_sext;  /* Enable c.sext.b, c.sext.h, c.sext.w (RV64 pseudo) */
-  int zcb_not;   /* Enable c.not */
-  int zcb_cmul;  /* Enable c.mul */
 };
 
 static struct riscv_set_options riscv_opts =
@@ -199,11 +195,7 @@ static struct riscv_set_options riscv_opts =
   0,	/* rve */
   1,	/* relax */
   DEFAULT_RISCV_ATTR, /* arch_attr */
-  0,	/* csr_check */
-  0,    /* zcb_zext */
-  0,    /* zcb_sext */
-  0,    /* zcb_not */
-  0     /* zcb_cmul */
+  0	/* csr_check */
 };
 
 static void
@@ -970,12 +962,12 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	  case 'S': USE_BITS (OP_MASK_CRS1S, OP_SH_CRS1S); break;
 	  case 'T': USE_BITS (OP_MASK_CRS2, OP_SH_CRS2); break;
 	  case 'D': USE_BITS (OP_MASK_CRS2S, OP_SH_CRS2S); break;
-    case 'Z': /* ZC* */
+          case 'Z': /* ZC* */
 	    switch (c = *p++)
 	      {
-    case 'b': used_bits |= ENCODE_RVC_LBU_IMM (-1U); break;
+                case 'b': used_bits |= ENCODE_RVC_LBU_IMM (-1U); break;
 		case 'c': USE_BITS (OP_MASK_CRS1S, OP_SH_CRS1S); break;
-    case 'h': used_bits |= ENCODE_RVC_LHU_IMM (-1U); break;
+                case 'h': used_bits |= ENCODE_RVC_LHU_IMM (-1U); break;
 		default:
 		  as_bad (_("internal: bad RISC-V opcode "
 			    "(unknown operand type `CZ%c'): %s %s"),
@@ -2208,21 +2200,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  switch (*++args)
 		    {
 	            case 'c': /* ZCB RS1 x8-x15.  */
-		      if (!riscv_opts.zcb_cmul
-		        && insn->match == MATCH_C_MUL)
-			break;
-                      if (!riscv_opts.zcb_not
-		        && insn->match == MATCH_C_NOT)
-			break;
-		      if (!riscv_opts.zcb_sext
-			&& (insn->match == MATCH_C_SEXT_B
-			|| insn->match == MATCH_C_SEXT_H))
-			break;
-		      if (!riscv_opts.zcb_zext
-			&& (insn->match == MATCH_C_ZEXT_B
-			|| insn->match == MATCH_C_ZEXT_H
-			|| insn->match == MATCH_C_ZEXT_W))
-			break;
 		      if (!reg_lookup (&s, RCLASS_GPR, &regno)
 			|| !(regno >= 8 && regno <= 15))
 			break;
