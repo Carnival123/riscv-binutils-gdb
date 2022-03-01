@@ -208,10 +208,6 @@ struct riscv_set_options
   int relax; /* Emit relocs the linker is allowed to relax.  */
   int arch_attr; /* Emit architecture and privileged elf attributes.  */
   int csr_check; /* Enable the CSR checking.  */
-  int zcb_zext;  /* Enable c.zext.b, c.zext.h, c.zext.w (RV64) */
-  int zcb_sext;  /* Enable c.sext.b, c.sext.h, c.sext.w (RV64 pseudo) */
-  int zcb_not;   /* Enable c.not */
-  int zcb_cmul;  /* Enable c.mul */
 };
 
 static struct riscv_set_options riscv_opts =
@@ -2555,21 +2551,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  switch (*++args)
 		    {
 	            case 'c': /* ZCB RS1 x8-x15.  */
-		      if (!riscv_opts.zcb_cmul
-		        && insn->match == MATCH_C_MUL)
-			break;
-                      if (!riscv_opts.zcb_not
-		        && insn->match == MATCH_C_NOT)
-			break;
-		      if (!riscv_opts.zcb_sext
-			&& (insn->match == MATCH_C_SEXT_B
-			|| insn->match == MATCH_C_SEXT_H))
-			break;
-		      if (!riscv_opts.zcb_zext
-			&& (insn->match == MATCH_C_ZEXT_B
-			|| insn->match == MATCH_C_ZEXT_H
-			|| insn->match == MATCH_C_ZEXT_W))
-			break;
 		      if (!reg_lookup (&s, RCLASS_GPR, &regno)
 			|| !(regno >= 8 && regno <= 15))
 			break;
